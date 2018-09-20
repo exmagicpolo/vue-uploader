@@ -11,6 +11,8 @@
       :current-speed="currentSpeed"
       :is-complete="isComplete"
       :is-uploading="isUploading"
+      :is-merged = "isMerged"
+      :is-transed = "isTransed"
       :size="size"
       :formated-size="formatedSize"
       :uploaded-size="uploadedSize"
@@ -25,9 +27,32 @@
       >
       <div class="uploader-file-progress" :class="progressingClass" :style="progressStyle"></div>
       <div class="uploader-file-info">
-        <div class="uploader-file-name"><i class="uploader-file-icon" :icon="fileCategory"></i>{{file.name}}</div>
+        <div class="uploader-file-name"><Icon :type="fileCategory()" size="30" style="position: absolute; margin-top:7px; margin-left: -20px; height: 40px;"></Icon>
+          <!--<i class="uploader-file-icon" :icon="fileCategory"></i>--><span style="margin-left: 30px">{{file.name}}</span></div>
         <div class="uploader-file-size">{{formatedSize}}</div>
-        <div class="uploader-file-meta"></div>
+        <!--<div class="uploader-file-meta"></div>-->
+
+        <div class="uploader-file-meta demo-upload-list-cover" v-show="status === 'merged'">
+          <Icon type="ios-trash-outline" size="20" @click.native="handleRemove($event)" />
+        </div>
+        <Upload class="uploader-file-meta"
+          ref="exUpload"
+          type="drag"
+          :action="action"
+          :headers="headers"
+          :data="exData"
+          :format="['xls','xlsx']"
+          :on-format-error="handleFormatErr"
+          :before-upload = "beforeUpload"
+          :on-success="handleSuccess"
+          :on-error="handleError"
+          style="display: block; width: 30px; margin-top: 10px; margin-left: -30px"
+          v-show="status === 'merged'">
+          <div :class="classes">
+            <Icon type="android-add" size="20"></Icon>
+          </div>
+        </Upload>
+
         <div class="uploader-file-status">
           <span v-show="status !== 'uploading'">{{statusText}}</span>
           <span v-show="status === 'uploading'">
@@ -53,6 +78,7 @@
   import { secondsToStr } from '../common/utils'
 
   const COMPONENT_NAME = 'uploader-file'
+  const prefixCls = 'demo-upload-list'
 
   export default {
     name: COMPONENT_NAME,
@@ -70,12 +96,17 @@
     },
     data () {
       return {
+        action: '',
+        headers: {},
+        exData: {},
         paused: false,
         error: false,
         averageSpeed: 0,
         currentSpeed: 0,
         isComplete: false,
         isUploading: false,
+        isMerged: false,
+        isTransed: false,
         size: 0,
         formatedSize: '',
         uploadedSize: 0,
@@ -83,28 +114,37 @@
         timeRemaining: 0,
         type: '',
         extension: '',
-        progressingClass: ''
+        progressingClass: '',
+        prefixCls: prefixCls,
+        extends: 'none'
       }
     },
     computed: {
       fileCategory () {
-        const extension = this.extension
-        const isFolder = this.file.isFolder
-        let type = isFolder ? 'folder' : 'unknown'
-        const categoryMap = this.file.uploader.opts.categoryMap
-        const typeMap = categoryMap || {
-          image: ['gif', 'jpg', 'jpeg', 'png', 'bmp', 'webp'],
-          video: ['mp4', 'm3u8', 'rmvb', 'avi', 'swf', '3gp', 'mkv', 'flv'],
-          audio: ['mp3', 'wav', 'wma', 'ogg', 'aac', 'flac'],
-          document: ['doc', 'txt', 'docx', 'pages', 'epub', 'pdf', 'numbers', 'csv', 'xls', 'xlsx', 'keynote', 'ppt', 'pptx']
-        }
-        Object.keys(typeMap).forEach((_type) => {
-          const extensions = typeMap[_type]
-          if (extensions.indexOf(extension) > -1) {
-            type = _type
+        return function () {
+          let type = ''
+          const extension = this.extension
+          const categoryMap = this.file.uploader.opts.categoryMap
+          const typeMap = categoryMap || {
+            image: ['gif', 'jpg', 'jpeg', 'png', 'bmp', 'webp'],
+            video: ['mp4', 'm3u8', 'rmvb', 'avi', 'swf', '3gp', 'mkv', 'flv'],
+            audio: ['mp3', 'wav', 'wma', 'ogg', 'aac', 'flac'],
+            document: ['doc', 'txt', 'docx', 'pages', 'epub', 'pdf', 'numbers', 'csv', 'xls', 'xlsx', 'keynote', 'ppt', 'pptx']
           }
-        })
-        return type
+          Object.keys(typeMap).forEach((_type) => {
+            const extensions = typeMap[_type]
+            if (extensions.indexOf(extension) > -1) {
+              if (_type === 'image') {
+                type = 'image'
+              } else if (_type === 'video' || _type === 'audio') {
+                type = 'social-youtube'
+              } else {
+                type = 'android-document'
+              }
+            }
+          })
+          return type
+        }
       },
       progressStyle () {
         const progress = Math.floor(this.progress * 100)
@@ -121,11 +161,17 @@
         return `${Uploader.utils.formatSize(this.averageSpeed)} / s`
       },
       status () {
+        const isMerged = this.isMerged
+        const isTransed = this.isTransed
         const isUploading = this.isUploading
         const isComplete = this.isComplete
         const isError = this.error
         const paused = this.paused
-        if (isComplete) {
+        if (isTransed) {
+          return 'transed'
+        } else if (isMerged) {
+          return 'merged'
+        } else if (isComplete) {
           return 'success'
         } else if (isError) {
           return 'error'
@@ -153,6 +199,15 @@
           parsedTimeRemaining = parseTimeRemaining(timeRemaining, parsedTimeRemaining)
         }
         return parsedTimeRemaining
+      },
+      classes () {
+        return [
+          `${prefixCls}`,
+          {
+            [`${prefixCls}-error`]: this.extends === 'none',
+            [`${prefixCls}-success`]: this.extends === 'ready'
+          }
+        ]
       }
     },
     watch: {
@@ -213,6 +268,7 @@
         this.error = false
         this.isComplete = true
         this.isUploading = false
+        this.$parent.$parent.fileMerged(this.file, this)
       },
       _fileComplete () {
         this._fileSuccess()
@@ -222,9 +278,29 @@
         this.error = true
         this.isComplete = false
         this.isUploading = false
+      },
+      handleRemove (e) {
+        this.$parent.$parent.examRemove(this, e)
+      },
+      handleSuccess (res) {
+        this.$parent.$parent.examSuccess(res, this)
+      },
+      handleError () {
+        this.$parent.$parent.examError()
+      },
+      handleFormatErr () {
+        this.$Spin.hide()
+        this.$Message.error('仅支持Excel表格导入!')
+      },
+      beforeUpload () {
+        this.$parent.$parent.examBeforeUpload()
       }
     },
     mounted () {
+      this.action = this.file.uploader.opts.action
+      this.headers = this.file.uploader.opts.headers
+      // this.exData = this.file.uploader.opts.exData
+      this.exData = {'uuid': this.file.uniqueIdentifier}
       const staticProps = ['paused', 'error', 'averageSpeed', 'currentSpeed']
       const fnProps = [
         'isComplete',
@@ -262,7 +338,20 @@
           this[fnProp.key] = this.file[fnProp.fn]()
         }
       })
-
+      const extension = this.extension
+      const categoryMap = this.$parent.$parent.options.categoryMap
+      const typeMap = categoryMap || {
+        image: ['gif', 'jpg', 'jpeg', 'png', 'bmp', 'webp'],
+        video: ['mp4', 'm3u8', 'rmvb', 'avi', 'swf', '3gp', 'mkv', 'flv'],
+        audio: ['mp3', 'wav', 'wma', 'ogg', 'aac', 'flac'],
+        document: ['doc', 'txt', 'docx', 'pages', 'epub', 'pdf', 'numbers', 'csv', 'xls', 'xlsx', 'keynote', 'ppt', 'pptx']
+      }
+      Object.keys(typeMap).forEach((_type) => {
+        const extensions = typeMap[_type]
+        if (extensions.indexOf(extension) > -1) {
+          this.type = _type
+        }
+      })
       const handlers = this._handlers = {}
       const eventHandler = (event) => {
         handlers[event] = (...args) => {
@@ -301,9 +390,9 @@
   .uploader-file[status="error"] .uploader-file-retry {
     display: block;
   }
-  .uploader-file[status="success"] .uploader-file-remove {
+/*  .uploader-file[status="success"] .uploader-file-remove {
     display: none;
-  }
+  }*/
   .uploader-file[status="error"] .uploader-file-progress {
     background: #ffe0e0;
   }
@@ -416,5 +505,39 @@
   .uploader-file-actions .uploader-file-remove {
     display: block;
     background-position-y: -34px;
+  }
+
+
+   .demo-upload-list-cover {
+     z-index: -1;
+     width: 28px;
+     height: 30px;
+     line-height: 30px;
+     background: #909090;
+     margin-top: 11px;
+     left: -1px;
+     border-style: none;
+  }
+  .uploader-file-info:hover .demo-upload-list-cover {
+    z-index: 5;
+  }
+  .demo-upload-list-cover i{
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    margin: 0 2px;
+  }
+  .demo-upload-list {
+    width: 30px;
+    height: 35px;
+    position: relative;
+    margin-top: -5px;
+  }
+  .demo-upload-list-error {
+    z-index: 10;
+    background: #e2eeff;
+  }
+  .demo-upload-list-success {
+    background: #2ebda1;
   }
 </style>

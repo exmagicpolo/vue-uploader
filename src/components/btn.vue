@@ -1,5 +1,5 @@
 <template>
-  <span class="uploader-btn" ref="btn" v-show="support">
+  <span class="uploader-btn box" ref="btn" v-show="support">
     <slot></slot>
   </span>
 </template>
@@ -44,7 +44,7 @@
     font-size: 100%;
     line-height: 1.4;
     color: #666;
-    border: 1px solid #666;
+    border: 1px solid #C8C8C8;
     cursor: pointer;
     border-radius: 2px;
     background: none;
@@ -52,5 +52,12 @@
   }
   .uploader-btn:hover {
     background-color: rgba(0, 0, 0, .08);
+  }
+  .box {
+    width: 80px;
+    height: 32px;
+    line-height:25px;
+    text-align: center;
+    border-radius:3px;
   }
 </style>

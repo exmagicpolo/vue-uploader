@@ -21,6 +21,15 @@ module.exports = merge(baseWebpackConfig, {
   },
   // cheap-module-eval-source-map is faster for development
   devtool: '#cheap-module-eval-source-map',
+  devServer: {
+    contentBase:'./',
+    proxy:{
+      "/web/**":{
+        target:"http://localhost:8848/examWeb",
+        pathRewrite:{"^/api":""}
+      }
+    }
+  },
   plugins: [
     new webpack.DefinePlugin({
       'process.env': config.dev.env

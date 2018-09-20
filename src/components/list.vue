@@ -21,6 +21,7 @@
     mixins: [uploaderMixin],
     computed: {
       fileList () {
+        // console.log(this.uploader.fileList)
         return this.uploader.fileList
       }
     },

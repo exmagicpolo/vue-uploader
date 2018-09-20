@@ -3,10 +3,15 @@
     <slot :files="files" :file-list="fileList" :started="started">
       <uploader-unsupport></uploader-unsupport>
       <uploader-drop>
-        <p>Drop files here to upload or</p>
-        <uploader-btn>select files</uploader-btn>
-        <uploader-btn :directory="true">select folder</uploader-btn>
+        <uploader-btn style="float: right">资料上传</uploader-btn>
+        <slot name="template"></slot>
       </uploader-drop>
+      <div class="uploader-file-info">
+        <slot name="head"></slot>
+      </div>
+      <div class="uploader-list">
+        <slot name="oldFileList"></slot>
+      </div>
       <uploader-list></uploader-list>
     </slot>
   </div>
@@ -23,8 +28,14 @@
   import UploaderFile from './file.vue'
 
   const COMPONENT_NAME = 'uploader'
-  const FILE_ADDED_EVENT = 'fileAdded'
   const FILES_ADDED_EVENT = 'filesAdded'
+  const FILE_ADDED_EVENT = 'fileAdded'
+  const EXAM_BEFORE_UPLOAD_EVENT = 'examBeforeUpload'
+  const EXAM_SUCCESS_EVENT = 'examSuccess'
+  const EXAM_ERROR_EVENT = 'examError'
+  const EXAM_REMOVE_EVENT = 'examRemove'
+  const FILE_REMOVE_EVENT = 'fileRemove'
+  const FILE_MERGED_EVENT = 'fileMerged'
   const UPLOAD_START_EVENT = 'uploadStart'
 
   export default {
@@ -86,6 +97,7 @@
       fileRemoved (file) {
         this.files = this.uploader.files
         this.fileList = this.uploader.fileList
+        this.$emit(kebabCase(FILE_REMOVE_EVENT), file)
       },
       filesSubmitted (files, fileList) {
         this.files = this.uploader.files
@@ -94,11 +106,32 @@
           this.uploader.upload()
         }
       },
+      fileMerged (file, com) {
+        this.$emit(kebabCase(FILE_MERGED_EVENT), file, com)
+      },
+      examBeforeUpload () {
+        this.$emit(kebabCase(EXAM_BEFORE_UPLOAD_EVENT))
+      },
+      examSuccess (res, com) {
+        this.$emit(kebabCase(EXAM_SUCCESS_EVENT), res, com)
+      },
+      examError () {
+        this.$emit(kebabCase(EXAM_ERROR_EVENT))
+      },
+      examRemove (com, e) {
+        this.$emit(kebabCase(EXAM_REMOVE_EVENT), com, e)
+      },
       allEvent (...args) {
         const name = args[0]
         const EVENTSMAP = {
           [FILE_ADDED_EVENT]: true,
           [FILES_ADDED_EVENT]: true,
+          [FILE_MERGED_EVENT]: true,
+          [FILE_REMOVE_EVENT]: true,
+          [EXAM_BEFORE_UPLOAD_EVENT]: true,
+          [EXAM_SUCCESS_EVENT]: true,
+          [EXAM_ERROR_EVENT]: true,
+          [EXAM_REMOVE_EVENT]: true,
           [UPLOAD_START_EVENT]: 'uploadStart'
         }
         const handler = EVENTSMAP[name]
