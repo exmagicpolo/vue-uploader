@@ -6,6 +6,8 @@
 
 ![QQ](https://github.com/simple-uploader/Uploader/blob/develop/assets/simple-uploader-QQ.jpg?raw=true)
 
+根据项目需求略作调整
+
 ## 特性
 
 * 支持文件、多文件、文件夹上传
